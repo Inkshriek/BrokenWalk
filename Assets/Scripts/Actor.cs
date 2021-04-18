@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public abstract class ActorMethods : MonoBehaviour {
+public abstract class Actor : MonoBehaviour {
     //This is a set of helpful methods to help with managing actor behavior. No implementations are required.
 
     //This here allows you to temporarily make the actor "act" something out over a duration. Handy and automatic.
-    public bool Busy { get; private set; }
+    public string DisplayName { get; set; }
+    public ActorController Controller { get; protected set; }
+    public bool Active { get; set; }
+    public bool Busy { get; protected set; }
     private Coroutine coroutine;
     public void StartAction(Actors.Action method) {
         if (coroutine != null) {
@@ -25,25 +28,6 @@ public abstract class ActorMethods : MonoBehaviour {
 }
 
 namespace Actors {
-
-    public interface IActor {
-        //The most basic interface meant for all actors (characters) to use.
-        string DisplayName { get; }
-        ActorController Controller { get; }
-        bool Active { get; set; }
-    }
-
-    public interface IHealth {
-        //This interface works with "health" values on a basic level.
-        float Health { get; set; }
-        float MaxHealth { get; set; }
-        void OnDamage(float value, DamageType type);
-    }
-
-    public interface IClimb {
-        //This interface assists with receiving information from nearby ledges and other climbables.
-        void OnLedgeNear(bool direction, Vector2 position);
-    }
 
     public enum NavType {
         //A set of navigation types used for defining what an actor is capable of doing.

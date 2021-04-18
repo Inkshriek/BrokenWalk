@@ -1,37 +1,31 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Actors;
 
 [RequireComponent(typeof(ActorController))]
-public class Player : ActorMethods, IActor, IHealth {
+public class Player : Actor {
 
-    public string DisplayName { get; set; }
-
-    [SerializeField] private float walkSpeed;
-    [SerializeField] private float runSpeed;
-    [SerializeField] private float crouchSpeed;
-    [SerializeField] private float jumpHeight;
-    [SerializeField] private float health;
-    [SerializeField] private float healthDeficit;
-    [SerializeField] private float maxHealth;
-    [SerializeField] private float bleedRate;
-
+    [SerializeField] private float walkSpeed = 3;
+    [SerializeField] private float runSpeed = 6;
+    [SerializeField] private float crouchSpeed = 2;
+    [SerializeField] private float jumpHeight = 10;
+    [SerializeField] private float fear = 0;
+    [SerializeField] private float fearThreshold = 240;
+    [SerializeField] private float reliefDelay = 2;
     private Rigidbody2D rb;
-    private bool jumping;
-
-    public ActorController Controller { get; private set; }
-    public bool Active { get; set; }
-    public PlayerState State { get; set; }
+    private bool jumping = false;
+    private float fearRate = -1;
+    private Coroutine reliefRoutine;
 
     public enum PlayerState {
         //This is just a set of states intended exclusively for the player.
         Crouching,
         Walking,
         Running,
-        Pushing,
-        LedgeGrabbed
+        Carrying
     }
+    public PlayerState State { get; private set; }
     public float Speed {
         get {
             switch (State) {
@@ -55,20 +49,19 @@ public class Player : ActorMethods, IActor, IHealth {
         }
     }
     public float JumpHeight { get { return jumpHeight; } set { jumpHeight = value; } }
-    public float Health { get { return health; } set { health = Mathf.Clamp(value, 0, MaxHealth); } }
-    public float HealthDeficit { get { return healthDeficit; } set { healthDeficit = value; } }
-    public float MaxHealth { get { return maxHealth; } set { maxHealth = Mathf.Max(0, value); } }
-    public float BleedRate {get { return bleedRate; } set { bleedRate = Mathf.Abs(value); } }
+    public float Fear { get { return fear; } set { fear = Mathf.Clamp(value, 0, fearThreshold); } }
+    public float FearThreshold { get { return fearThreshold; } set { fearThreshold = Mathf.Max(0, value); } }
+    public float FearRate { get { return fearRate; } private set { fearRate = value; } }
+    public float ReliefDelay { get { return reliefDelay; } set { reliefDelay = Mathf.Max(0, value); } }
 
     private void Awake() {
-        DisplayName = "Player";
+        DisplayName = "Wanderer";
 
         rb = GetComponent<Rigidbody2D>();
         Controller = GetComponent<ActorController>();
 
         Active = true;
         State = PlayerState.Walking;
-        jumping = false;
     }
 
     private void Update() {
@@ -103,38 +96,27 @@ public class Player : ActorMethods, IActor, IHealth {
                 }
             }
 
-            BleedHealth();
-        }
+            Fear += Time.deltaTime * FearRate;
+            if (Fear >= FearThreshold) {
+                Active = false;
 
-        AnimationSelector();
+            }
+        }
     }
 
-    public void OnDamage(float value, DamageType type) {
-        HealthDeficit += value;
-        Controller.InputMotion = new Vector2(2, 0);
-        Controller.ApplyJump(new Vector2(5,5));
+    public void Frighten() {
+        FearRate = 1;
+        if (reliefRoutine != null) StopCoroutine(reliefRoutine);
     }
 
-    private void BleedHealth() {
-        //This whole method here intends to adjust the current health according to the deficit, making it "bleed" over time until the deficit is zero.
-
-        float adjustment;
-        if (HealthDeficit > 0) {
-            adjustment = Mathf.Min(HealthDeficit, BleedRate * Time.deltaTime);
-        }
-        else if (HealthDeficit < 0) {
-            adjustment = HealthDeficit;
-        }
-        else {
-            adjustment = 0;
-            //*lip smack* nice
-        }
-        
-        HealthDeficit -= adjustment;
-        Health -= adjustment;
+    public void Relieve() {
+        FearRate = 0;
+        if (reliefRoutine != null) StopCoroutine(reliefRoutine);
+        reliefRoutine = StartCoroutine(ReliefTime());
     }
 
-    private void AnimationSelector() {
-        
+    private IEnumerator ReliefTime() {
+        yield return new WaitForSeconds(ReliefDelay);
+        FearRate = -1;
     }
 }

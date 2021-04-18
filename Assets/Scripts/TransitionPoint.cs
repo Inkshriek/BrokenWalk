@@ -34,7 +34,6 @@ public class TransitionPoint : MonoBehaviour {
         DontDestroyOnLoad(this);
 
         player.Active = false;
-        player.State = Player.PlayerState.Running;
 
         switch (type) {
             case TransitionType.Left:
