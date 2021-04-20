@@ -43,11 +43,11 @@ public class LightEmitter : MonoBehaviour {
     }
 
     private void Update() {
-        Vector2 actual = (Vector2)transform.position + originOffset;
+        Vector2 position = (Vector2)transform.position + originOffset;
 
-        if (Physics2D.OverlapPoint(actual, LayerMask.GetMask("DisturbanceZone")) == null) {
-            ManageReceiversLit(actual);
-            FindReceivers(actual);
+        if (Physics2D.OverlapPoint(position, LayerMask.GetMask("DisturbanceZone")) == null) {
+            ManageReceiversLit(position);
+            FindReceivers(position);
         }
         else {
             InDisturbanceZone();
@@ -55,12 +55,12 @@ public class LightEmitter : MonoBehaviour {
 
     }
 
-    private void FindReceivers(Vector2 thisPosition) {
-        RaycastHit2D[] check = Physics2D.CircleCastAll(thisPosition, lightDistance, Vector2.zero, Mathf.Infinity, LayerMask.GetMask("LightReceiver"));
+    private void FindReceivers(Vector2 position) {
+        RaycastHit2D[] check = Physics2D.CircleCastAll(position, lightDistance, Vector2.zero, Mathf.Infinity, LayerMask.GetMask("LightReceiver"));
         foreach (RaycastHit2D hit in check) {
             Vector2 target = hit.collider.transform.position;
 
-            if (!CheckCriteria(target)) {
+            if (!CheckCriteria(position, target)) {
                 continue;
             }
 
@@ -88,21 +88,20 @@ public class LightEmitter : MonoBehaviour {
         }
     }
 
-    private void ManageReceiversLit(Vector2 thisPosition) {
+    private void ManageReceiversLit(Vector2 position) {
         if (receiversLit.Count == 0) return;
 
         for (int i = 0; i < receiversLit.Count; i++) {
             Vector2 target = receiversLit[i].transform.position;
 
-            if (!CheckCriteria(target)) {
+            if (!CheckCriteria(position, target)) {
                 receiversLit[i].RemoveLight();
                 receiversLit.RemoveAt(i);
             }
         }
     }
 
-    private bool CheckCriteria(Vector2 target) {
-        Vector2 origin = transform.position;
+    private bool CheckCriteria(Vector2 origin, Vector2 target) {
 
         Vector2 lightAngle = new Vector2(Mathf.Cos(Mathf.Deg2Rad * lightDirection), Mathf.Sin(Mathf.Deg2Rad * lightDirection));
         float angleDifference = Vector2.Angle(target - origin, lightAngle);

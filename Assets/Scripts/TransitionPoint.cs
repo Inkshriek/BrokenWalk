@@ -8,25 +8,21 @@ public class TransitionPoint : MonoBehaviour {
 
     [SerializeField] public TransitionType type; //The type of the transition.
     [SerializeField] public string destinationScene; //The scene you're intending to go to. Use its name from Assets.
-    [SerializeField] public int destinationTPoint; //The transition point in the room you want Ichabod to enter from, by index.
+    [SerializeField] public int destinationTPoint; //The transition point in the room you want the player to enter from, by index.
     private bool transitioning;
-    private bool roomChanged;
 
     private void Awake() {
         transitioning = false;
-        roomChanged = false;
-        SceneManager.sceneLoaded += OnSceneLoaded;
-    }
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
-        if (scene.name == destinationScene) {
-            roomChanged = true;
-        }
     }
 
     private void OnTriggerEnter2D(Collider2D collision) {
-        if (collision.gameObject.CompareTag("Player") && !transitioning) {
-            StartCoroutine(Transition(collision.gameObject.GetComponent<Player>()));
+        Player player = collision.gameObject.GetComponent<Player>();
+        if (player == null) {
+            return;
+        }
+
+        if (player.gameObject.CompareTag("Player") && !transitioning && player.Active == true) {
+            StartCoroutine(Transition(player));
         }
     }
 
@@ -37,11 +33,11 @@ public class TransitionPoint : MonoBehaviour {
 
         switch (type) {
             case TransitionType.Left:
-                player.Controller.InputMotion = new Vector2(-8, 0);
+                player.Controller.InputMotion = new Vector2(-3, 0);
 
                 break;
             case TransitionType.Right:
-                player.Controller.InputMotion = new Vector2(8, 0);
+                player.Controller.InputMotion = new Vector2(3, 0);
 
                 break;
             default:
@@ -52,16 +48,17 @@ public class TransitionPoint : MonoBehaviour {
         StartCoroutine(HUDController.Fade(1f, 0.05f, new Color(0, 0, 0, 1)));
         yield return new WaitForSeconds(1);
 
-        SceneManager.LoadScene(destinationScene);
-        yield return new WaitUntil(() => roomChanged == true);
+        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(destinationScene);
+        while (!asyncLoad.isDone) {
+            yield return null;
+        }
 
         SceneData sceneData = FindObjectOfType<SceneData>();
         try {
-            sceneData.transitions[destinationTPoint].gameObject.SetActive(false);
             player.transform.position = sceneData.transitions[destinationTPoint].transform.position;
         }
         catch {
-            Debug.LogError("An object with SceneData is missing from the scene. The transition could not finish.");
+            Debug.LogError("An error occurred trying to get the player into position at the destination. It's either missing SceneData or the player object wasn't set to DontDestroyOnLoad.");
 
             yield break;
         }
@@ -71,8 +68,8 @@ public class TransitionPoint : MonoBehaviour {
         player.Controller.InputMotion = Vector2.zero;
         player.Active = true;
 
-        sceneData.transitions[destinationTPoint].gameObject.SetActive(true);
         Destroy(this.gameObject);
+        
     }
 
     public enum TransitionType {

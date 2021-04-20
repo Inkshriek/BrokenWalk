@@ -17,6 +17,8 @@ public class Player : Actor {
     private bool jumping = false;
     private float fearRate = -1;
     private Coroutine reliefRoutine;
+    private Pickup heldObject;
+    private int facingDirection = 1;
 
     public enum PlayerState {
         //This is just a set of states intended exclusively for the player.
@@ -31,13 +33,13 @@ public class Player : Actor {
             switch (State) {
 
                 case PlayerState.Crouching:
-                    return crouchSpeed;
+                return crouchSpeed;
 
                 case PlayerState.Running:
-                    return runSpeed;
+                return runSpeed;
 
                 default:
-                    return walkSpeed;
+                return walkSpeed;
             }
         }
         set {
@@ -67,20 +69,44 @@ public class Player : Actor {
     private void Update() {
         if (Active) {
             if (!Busy) {
-                if (Controller.IsTouchingGround && Input.GetKeyDown(GameController.jumpKey)) {
-                    Controller.ApplyJump(JumpHeight);
-                    jumping = true;
-                    rb.gravityScale /= 1.5f;
-                }
+                if (State != PlayerState.Carrying) {
+                    if (Controller.IsTouchingGround && Input.GetKeyDown(GameController.jumpKey)) {
+                        Controller.ApplyJump(JumpHeight);
+                        jumping = true;
+                        rb.gravityScale /= 1.5f;
+                    }
 
-                if (Input.GetAxisRaw("Vertical") < 0) {
-                    State = PlayerState.Crouching;
+                    if (Input.GetAxisRaw("Vertical") < 0) {
+                        State = PlayerState.Crouching;
+                    }
+                    else if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) {
+                        State = PlayerState.Running;
+                    }
+                    else {
+                        State = PlayerState.Walking;
+                    }
+
+                    if (Input.GetKeyDown(KeyCode.E)) {
+                        RaycastHit2D check = Physics2D.Raycast((Vector2)transform.position + new Vector2(0,0.5f), Vector2.right * facingDirection);
+                        if (check) {
+                            Pickup pickup = check.collider.GetComponent<Pickup>();
+                            if (pickup != null) {
+                                heldObject = pickup;
+                                State = PlayerState.Carrying;
+                                pickup.PickUp();
+                            }
+                        }
+                    }
                 }
-                else if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) {
-                    State = PlayerState.Running;
-                }
-                else {
+                else if (Input.GetKey(KeyCode.Space) || Input.GetKeyDown(KeyCode.E)) {
                     State = PlayerState.Walking;
+                    heldObject.Drop();
+                    heldObject = null;
+                    if (Input.GetKey(KeyCode.Space)) {
+                        Controller.ApplyJump(JumpHeight);
+                        jumping = true;
+                        rb.gravityScale /= 1.5f;
+                    }
                 }
 
                 if (Controller.IsTouchingGround) {
@@ -90,16 +116,24 @@ public class Player : Actor {
                     Controller.InputMotion = new Vector2(Input.GetAxisRaw("Horizontal") * walkSpeed, 0);
                 }
 
-                if (jumping && (!Input.GetKey(GameController.jumpKey) || rb.velocity.y < 0)) {
+                if (jumping && (!Input.GetKey(KeyCode.Space) || rb.velocity.y < 0)) {
                     rb.gravityScale *= 1.5f;
                     jumping = false;
                 }
+                
+                if (Input.GetAxisRaw("Horizontal") != 0) facingDirection = (int)Mathf.Sign(Input.GetAxisRaw("Horizontal"));
+
+                if (heldObject != null) {
+                    heldObject.HoldDirection = facingDirection;
+                    heldObject.transform.position = (Vector2)transform.position + new Vector2(1 * facingDirection, 0.5f);
+                }
             }
 
-            Fear += Time.deltaTime * FearRate;
+            Fear += Time.deltaTime * FearRate * 60;
             if (Fear >= FearThreshold) {
                 Active = false;
-
+                Controller.InputMotion = Vector2.zero;
+                //TODO: Figure out getting pulled from the dark to the start position.
             }
         }
     }

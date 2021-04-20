@@ -5,8 +5,6 @@ using Actors;
 [RequireComponent(typeof(BoxCollider2D))]
 [DisallowMultipleComponent]
 public class ActorController : MonoBehaviour {
-
-    [SerializeField] private NavType movementType;
     [SerializeField] private float friction = 1;
     [SerializeField] private float aerialControl = 0.5f;
     [SerializeField] private float gravity = 1;
@@ -17,7 +15,7 @@ public class ActorController : MonoBehaviour {
     private BoxCollider2D col;
 
     private bool hasJumped = false;
-    private int layerMask = 1;
+    private LayerMask layerMask = ~(1 << 2);
     private Collider2D currentSurface;
     private ContactAttributes surfaceAtts;
     private RaycastHit2D groundCheck;
@@ -49,7 +47,6 @@ public class ActorController : MonoBehaviour {
             );
         }
     }
-    public NavType MovementType { get { return movementType; } set { movementType = value; } }
     public float Friction { get { return surfaceAtts != null ? friction * surfaceAtts.friction : friction; } set { friction = value; } }
     public float AerialControl { get { return aerialControl; } set { aerialControl = value; } }
     public float Gravity { get { return gravity; } set { gravity = value; } }
@@ -113,28 +110,16 @@ public class ActorController : MonoBehaviour {
             }
         }
 
-        switch (movementType) {
-            case NavType.Normal:
-                if (IsTouchingGround) {
-                    //If you are touching the ground, the script will simulate walking. 
-                    MoveOnGround(InputMotion.x, snapToGround);
-
-                }
-                else {
-                    //If you are not touching the ground, the script will simulate being in the air.
-                    MoveOffGround(InputMotion, false);
-                }
-                break;
-            case NavType.Flying:
-                //Since you can't really "walk" it just ignores MoveOnGround and permanently simulates being in the air.
-                MoveOffGround(InputMotion, true);
-                break;
-            default:
-                Debug.Log("For some reason this ActorController is being a little bitch and trying unknown movement types.");
-                break;
+        if (IsTouchingGround) {
+            //If you are touching the ground, the script will simulate walking. 
+            MoveOnGround(InputMotion.x, snapToGround);
+        }
+        else {
+            //If you are not touching the ground, the script will simulate being in the air.
+            MoveOffGround(InputMotion, false);
         }
 
-        rb.position = position; //Updating actual position with the internally saved one.
+        rb.MovePosition(position); //Updating actual position with the internally saved one.
     }
 
     private void MoveOnGround(float input, bool snapdown) {
