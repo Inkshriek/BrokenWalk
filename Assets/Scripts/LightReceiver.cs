@@ -14,12 +14,14 @@ public class LightReceiver : MonoBehaviour {
     public void AddLight() {
         bool prev = Lit;
         Lights += 1;
+        Debug.Log(name + " has " + Lights + " lights on it.");
         if (Lit && !prev) lit.Invoke();
     }
 
     public void RemoveLight() {
         bool prev = Lit;
         Lights -= 1;
+        Debug.Log(name + " has " + Lights + " lights on it.");
         if (!Lit && prev) unlit.Invoke();
     }
 }

@@ -15,7 +15,7 @@ public class ActorController : MonoBehaviour {
     private BoxCollider2D col;
 
     private bool hasJumped = false;
-    private LayerMask layerMask = ~(1 << 2);
+    private LayerMask layerMask;
     private Collider2D currentSurface;
     private ContactAttributes surfaceAtts;
     private RaycastHit2D groundCheck;
@@ -27,6 +27,7 @@ public class ActorController : MonoBehaviour {
     private float collisionOffset = 0.01f; //This should never be set to 0 or less
     private float terminalVelocityX = 40;
     private float terminalVelocityY = 40;
+    private bool queueGroundTouch = false;
 
     public delegate void ActorEvent(string message);
     public event ActorEvent Jumped;
@@ -59,6 +60,7 @@ public class ActorController : MonoBehaviour {
         rb = GetComponent<Rigidbody2D>();
         col = GetComponent<BoxCollider2D>();
         force = new Vector2(0, 0);
+        layerMask = (1 << 0) | LayerMask.GetMask("Environment");
 
         if (gameObject.GetComponents<ActorController>().Length > 1) {
             Debug.LogError("I'm not sure how you did it but you shouldn't be using more than one ActorController on a GameObject.");
@@ -70,24 +72,24 @@ public class ActorController : MonoBehaviour {
 
 	void FixedUpdate () {
         position = rb.position;
-        groundCheck = Physics2D.Raycast(position, Vector2.down, 0.02f, layerMask);
+        groundCheck = Physics2D.Raycast(position, Vector2.down, collisionOffset + 0.01f, layerMask);
         bool snapToGround = false;
 
-        if (groundCheck.collider != null && Vector2.Angle(transform.up, groundCheck.normal) <= SlopeTolerance && !hasJumped) {
+        if (((groundCheck.collider != null && Vector2.Angle(transform.up, groundCheck.normal) <= SlopeTolerance) || queueGroundTouch) && !hasJumped) {
             //If the actor is touching the ground on this frame.
             ang = Vector2.SignedAngle(transform.up, groundCheck.normal);
 
             if (groundCheck.collider != currentSurface) {
                 Surface surface = groundCheck.collider.gameObject.GetComponent<Surface>();
-                if (surface != null) 
-                    surfaceAtts = surface.Attributes;
+                if (surface != null) surfaceAtts = surface.Attributes;
                 
                 currentSurface = groundCheck.collider;
             }
             if (!IsTouchingGround) {
                 GroundTouched?.Invoke(name + " touched the ground!");
                 IsTouchingGround = true;
-                force.y = 0;
+                queueGroundTouch = false;
+                Force = new Vector2(Force.x, 0);
             }
         }
         else {
@@ -127,7 +129,7 @@ public class ActorController : MonoBehaviour {
         if (Force.x < input) {
             Force = new Vector2(Mathf.Min(Force.x + Friction, input), Force.y);
         }
-        else if (force.x > input) {
+        else if (Force.x > input) {
             Force = new Vector2(Mathf.Max(Force.x - Friction, input), Force.y);
         }
 
@@ -195,7 +197,8 @@ public class ActorController : MonoBehaviour {
             position = collisionCheck.point + collisionCheck.normal * collisionOffset;
             ang = Vector2.SignedAngle(transform.up, collisionCheck.normal);
             if (Mathf.Abs(ang) <= slopeTolerance) {
-                force.y = 0;
+                //Force = new Vector2(Force.x, 0);
+                queueGroundTouch = true;
             }
             else {
                 float r = Mathf.Deg2Rad * ang;

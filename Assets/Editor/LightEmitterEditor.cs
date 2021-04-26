@@ -21,6 +21,8 @@ public class LightEmitterEditor : Editor {
         script.LightRange = EditorGUILayout.IntSlider("Light Range", script.LightRange, 0, 180);
         script.LightDirection = EditorGUILayout.IntSlider("Light Direction", script.LightDirection, 0, 359);
         script.LightDistance = EditorGUILayout.FloatField("Light Distance", script.LightDistance);
+        script.LightEntity = (Light)EditorGUILayout.ObjectField("Light Entity", script.LightEntity, typeof(Light), true);
+
         if (GUI.changed) {
             Undo.RegisterCompleteObjectUndo(script, "Light Emitter Change");
         }
@@ -33,16 +35,16 @@ public class LightEmitterEditor : Editor {
     public void OnSceneGUI() {
 
         if (safeToDraw) {
-            Vector3 thisPosition = script.transform.position + (Vector3)script.originOffset;
+            Vector3 position = script.transform.position + (Vector3)script.originOffset;
             EditorGUI.BeginChangeCheck();
 
             Vector2 angleUpper = new Vector2(Mathf.Cos(Mathf.Deg2Rad * (script.LightDirection + script.LightRange / 2)), Mathf.Sin(Mathf.Deg2Rad * (script.LightDirection + script.LightRange / 2)));
             Vector2 angleLower = new Vector2(Mathf.Cos(Mathf.Deg2Rad * (script.LightDirection - script.LightRange / 2)), Mathf.Sin(Mathf.Deg2Rad * (script.LightDirection - script.LightRange / 2)));
 
             Handles.color = Color.yellow;
-            Handles.DrawDottedLine(thisPosition, (Vector3)angleUpper * script.LightDistance + thisPosition, 2f);
-            Handles.DrawDottedLine(thisPosition, (Vector3)angleLower * script.LightDistance + thisPosition, 2f);
-            Handles.DrawWireArc(thisPosition, new Vector3(0,0,1), angleLower, script.LightRange, script.LightDistance);
+            Handles.DrawDottedLine(position, (Vector3)angleUpper * script.LightDistance + position, 2f);
+            Handles.DrawDottedLine(position, (Vector3)angleLower * script.LightDistance + position, 2f);
+            Handles.DrawWireArc(position, new Vector3(0,0,1), angleLower, script.LightRange, script.LightDistance);
         }
         else {
             SceneView.RepaintAll();

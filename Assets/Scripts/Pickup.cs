@@ -15,7 +15,7 @@ public class Pickup : MonoBehaviour {
 
     private void Awake() {
         rb = GetComponent<Rigidbody2D>();
-        layerMask = ~(1 << 2 | 1 << 9);
+        layerMask = (1 << 0) | LayerMask.GetMask("Environment");
         if (rb.isKinematic != true) Debug.LogError("A Pickup needs to have its rigidbody as kinematic to work properly.");
     }
 

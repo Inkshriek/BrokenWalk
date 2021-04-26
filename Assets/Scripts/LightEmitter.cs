@@ -8,7 +8,9 @@ public class LightEmitter : MonoBehaviour {
     [SerializeField] private float lightDistance;
     [SerializeField][Range(0,359)] private int lightDirection;
     [SerializeField][Range(0,180)] private int lightRange;
+    [SerializeField] private Light lightEntity;
     private List<LightReceiver> receiversLit;
+    private float xScale;
 
     public float LightDistance {
         get {
@@ -37,9 +39,11 @@ public class LightEmitter : MonoBehaviour {
             lightRange = value;
         }
     }
+    public Light LightEntity { get { return lightEntity; } set { lightEntity = value; } }
 
     private void Awake() {
         receiversLit = new List<LightReceiver>();
+        xScale = transform.localScale.x;
     }
 
     private void Update() {
@@ -49,20 +53,20 @@ public class LightEmitter : MonoBehaviour {
             ManageReceiversLit(position);
             FindReceivers(position);
         }
-        else {
-            InDisturbanceZone();
-        }
+        else InDisturbanceZone();
 
+        if (Mathf.Sign(transform.localScale.x) != Mathf.Sign(xScale)) {
+            FlipLight();
+        }
+        xScale = transform.localScale.x;
     }
 
     private void FindReceivers(Vector2 position) {
-        RaycastHit2D[] check = Physics2D.CircleCastAll(position, lightDistance, Vector2.zero, Mathf.Infinity, LayerMask.GetMask("LightReceiver"));
+        RaycastHit2D[] check = Physics2D.CircleCastAll(position, LightDistance, Vector2.zero, Mathf.Infinity, LayerMask.GetMask("LightReceiver"));
         foreach (RaycastHit2D hit in check) {
             Vector2 target = hit.collider.transform.position;
 
-            if (!CheckCriteria(position, target)) {
-                continue;
-            }
+            if (!CheckCriteria(position, target)) continue;
 
             LightReceiver component = hit.collider.GetComponent<LightReceiver>();
             if (component != null) {
@@ -86,6 +90,9 @@ public class LightEmitter : MonoBehaviour {
                 }
             }
         }
+
+        
+        if (lightEntity != null) lightEntity.enabled = true;
     }
 
     private void ManageReceiversLit(Vector2 position) {
@@ -103,11 +110,11 @@ public class LightEmitter : MonoBehaviour {
 
     private bool CheckCriteria(Vector2 origin, Vector2 target) {
 
-        Vector2 lightAngle = new Vector2(Mathf.Cos(Mathf.Deg2Rad * lightDirection), Mathf.Sin(Mathf.Deg2Rad * lightDirection));
+        Vector2 lightAngle = new Vector2(Mathf.Cos(Mathf.Deg2Rad * LightDirection), Mathf.Sin(Mathf.Deg2Rad * LightDirection));
         float angleDifference = Vector2.Angle(target - origin, lightAngle);
         float distance = Mathf.Abs(Vector2.Distance(origin, target));
 
-        if (angleDifference <= (lightRange / 2) && distance <= lightDistance && !Physics2D.Linecast(origin, target, LayerMask.GetMask("Environment"))) {
+        if (angleDifference <= (LightRange / 2) && distance <= LightDistance && !Physics2D.Linecast(origin, target, LayerMask.GetMask("Environment"))) {
             return true;
         }
         else {
@@ -120,5 +127,12 @@ public class LightEmitter : MonoBehaviour {
             foreach (LightReceiver receiver in receiversLit) receiver.RemoveLight();
             receiversLit.Clear();
         }
+        if (lightEntity != null) lightEntity.enabled = false;
+    }
+
+    private void FlipLight() {
+        //Can't figure this out, so this is only a bandaid.
+        LightDirection += 180;
+
     }
 }

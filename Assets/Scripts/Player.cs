@@ -13,12 +13,14 @@ public class Player : Actor {
     [SerializeField] private float fear = 0;
     [SerializeField] private float fearThreshold = 240;
     [SerializeField] private float reliefDelay = 2;
+    [SerializeField] private bool fearless = false;
     private Rigidbody2D rb;
     private bool jumping = false;
     private float fearRate = -1;
     private Coroutine reliefRoutine;
     private Pickup heldObject;
     private int facingDirection = 1;
+    private Vector3 safety;
 
     public enum PlayerState {
         //This is just a set of states intended exclusively for the player.
@@ -55,6 +57,14 @@ public class Player : Actor {
     public float FearThreshold { get { return fearThreshold; } set { fearThreshold = Mathf.Max(0, value); } }
     public float FearRate { get { return fearRate; } private set { fearRate = value; } }
     public float ReliefDelay { get { return reliefDelay; } set { reliefDelay = Mathf.Max(0, value); } }
+    public bool Fearless { 
+        get { return fearless; } 
+        set {
+            fearless = value; 
+            fearRate = 0;
+            fear = 0;
+        } 
+    }
 
     private void Awake() {
         DisplayName = "Wanderer";
@@ -64,6 +74,7 @@ public class Player : Actor {
 
         Active = true;
         State = PlayerState.Walking;
+        safety = transform.position;
     }
 
     private void Update() {
@@ -76,18 +87,12 @@ public class Player : Actor {
                         rb.gravityScale /= 1.5f;
                     }
 
-                    if (Input.GetAxisRaw("Vertical") < 0) {
-                        State = PlayerState.Crouching;
-                    }
-                    else if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) {
-                        State = PlayerState.Running;
-                    }
-                    else {
-                        State = PlayerState.Walking;
-                    }
+                    if (Input.GetAxisRaw("Vertical") < 0) State = PlayerState.Crouching;
+                    else if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) State = PlayerState.Running;
+                    else State = PlayerState.Walking;
 
                     if (Input.GetKeyDown(KeyCode.E)) {
-                        RaycastHit2D check = Physics2D.Raycast((Vector2)transform.position + new Vector2(0,0.5f), Vector2.right * facingDirection);
+                        RaycastHit2D check = Physics2D.Raycast((Vector2)transform.position + new Vector2(0,0.5f), Vector2.right * facingDirection, 1f, LayerMask.GetMask("Pickup"));
                         if (check) {
                             Pickup pickup = check.collider.GetComponent<Pickup>();
                             if (pickup != null) {
@@ -109,12 +114,8 @@ public class Player : Actor {
                     }
                 }
 
-                if (Controller.IsTouchingGround) {
-                    Controller.InputMotion = new Vector2(Input.GetAxisRaw("Horizontal") * Speed, 0);
-                }
-                else {
-                    Controller.InputMotion = new Vector2(Input.GetAxisRaw("Horizontal") * walkSpeed, 0);
-                }
+                if (Controller.IsTouchingGround) Controller.InputMotion = new Vector2(Input.GetAxisRaw("Horizontal") * Speed, 0);
+                else Controller.InputMotion = new Vector2(Input.GetAxisRaw("Horizontal") * walkSpeed, 0);
 
                 if (jumping && (!Input.GetKey(KeyCode.Space) || rb.velocity.y < 0)) {
                     rb.gravityScale *= 1.5f;
@@ -125,26 +126,32 @@ public class Player : Actor {
 
                 if (heldObject != null) {
                     heldObject.HoldDirection = facingDirection;
-                    heldObject.transform.position = (Vector2)transform.position + new Vector2(1 * facingDirection, 0.5f);
+                    heldObject.transform.position = (Vector2)transform.position + new Vector2(facingDirection, 0.5f);
+                    heldObject.transform.localScale = new Vector3(facingDirection, heldObject.transform.localScale.y, heldObject.transform.localScale.z);
                 }
             }
 
             Fear += Time.deltaTime * FearRate * 60;
-            if (Fear >= FearThreshold) {
-                Active = false;
-                Controller.InputMotion = Vector2.zero;
-                //TODO: Figure out getting pulled from the dark to the start position.
+            if (Fear >= FearThreshold && !Fearless) {
+                transform.position = safety;
+                Fear = 0;
             }
         }
     }
 
     public void Frighten() {
+        if (Fearless) return;
+
         FearRate = 1;
+        Speed = 1; //This is just an ez fix for now. Needs to be replaced with something relative.
         if (reliefRoutine != null) StopCoroutine(reliefRoutine);
     }
 
     public void Relieve() {
+        if (Fearless) return;
+
         FearRate = 0;
+        Speed = 3; //This too.
         if (reliefRoutine != null) StopCoroutine(reliefRoutine);
         reliefRoutine = StartCoroutine(ReliefTime());
     }

@@ -3,50 +3,34 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-[RequireComponent(typeof(BoxCollider2D))]
 public class TransitionPoint : MonoBehaviour {
 
-    [SerializeField] public TransitionType type; //The type of the transition.
-    [SerializeField] public string destinationScene; //The scene you're intending to go to. Use its name from Assets.
-    [SerializeField] public int destinationTPoint; //The transition point in the room you want the player to enter from, by index.
-    private bool transitioning;
-
-    private void Awake() {
-        transitioning = false;
-    }
+    public TransitionType type; //The type of the transition.
+    public string destinationScene; //The scene you're intending to go to. Use its name from Assets.
+    public int destinationTPoint; //The transition point in the room you want the player to enter from, by index.
+    public float delayOut = 1f;
+    public float delayIn = 1f;
+    public delegate void TransitionEvent();
+    public static event TransitionEvent TransitionOut;
+    public static event TransitionEvent TransitionIn;
+    private bool transitioning = false;
 
     private void OnTriggerEnter2D(Collider2D collision) {
         Player player = collision.gameObject.GetComponent<Player>();
-        if (player == null) {
-            return;
-        }
+        if (player == null) return;
 
-        if (player.gameObject.CompareTag("Player") && !transitioning && player.Active == true) {
-            StartCoroutine(Transition(player));
-        }
+        if (!transitioning && player.Active == true) StartCoroutine(Transition(player));
     }
 
-    public IEnumerator Transition(Player player) {
+    private IEnumerator Transition(Player player) {
+        //This stuff is insanely messy lol
         DontDestroyOnLoad(this);
+        transitioning = true;
 
         player.Active = false;
-
-        switch (type) {
-            case TransitionType.Left:
-                player.Controller.InputMotion = new Vector2(-3, 0);
-
-                break;
-            case TransitionType.Right:
-                player.Controller.InputMotion = new Vector2(3, 0);
-
-                break;
-            default:
-
-                break;
-        }
-
-        StartCoroutine(HUDController.Fade(1f, 0.05f, new Color(0, 0, 0, 1)));
-        yield return new WaitForSeconds(1);
+        ControlPlayer(player);
+        TransitionOut?.Invoke();
+        yield return new WaitForSeconds(delayOut);
 
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(destinationScene);
         while (!asyncLoad.isDone) {
@@ -54,22 +38,39 @@ public class TransitionPoint : MonoBehaviour {
         }
 
         SceneData sceneData = FindObjectOfType<SceneData>();
+        player = sceneData.player;
         try {
+            player.Active = false;
+            ControlPlayer(player);
             player.transform.position = sceneData.transitions[destinationTPoint].transform.position;
         }
         catch {
-            Debug.LogError("An error occurred trying to get the player into position at the destination. It's either missing SceneData or the player object wasn't set to DontDestroyOnLoad.");
-
+            Debug.LogError("An error occurred with the SceneData in the scene being entered. Are you sure it's set up properly?");
             yield break;
         }
-        StartCoroutine(HUDController.Fade(1f, 0.05f, new Color(0, 0, 0, 0)));
-        yield return new WaitForSeconds(1);
 
+        TransitionIn?.Invoke();
+        yield return new WaitForSeconds(delayIn);
         player.Controller.InputMotion = Vector2.zero;
         player.Active = true;
 
         Destroy(this.gameObject);
-        
+    }
+
+    private void ControlPlayer(Player player) {
+        switch (type) {
+            case TransitionType.Left:
+            player.Controller.InputMotion = new Vector2(-3, 0);
+            break;
+            
+            case TransitionType.Right:
+            player.Controller.InputMotion = new Vector2(3, 0);
+            break;
+
+            default:
+            player.Controller.InputMotion = Vector2.zero;
+            break;
+        }
     }
 
     public enum TransitionType {
