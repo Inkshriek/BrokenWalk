@@ -62,11 +62,11 @@ public class TransitionPoint : MonoBehaviour {
     private void ControlPlayer(Player player) {
         switch (type) {
             case TransitionType.Left:
-            player.Controller.InputMotion = new Vector2(-3, 0);
+            player.Controller.InputMotion = new Vector2(-2, 0);
             break;
             
             case TransitionType.Right:
-            player.Controller.InputMotion = new Vector2(3, 0);
+            player.Controller.InputMotion = new Vector2(2, 0);
             break;
 
             default:

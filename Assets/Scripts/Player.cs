@@ -142,6 +142,7 @@ public class Player : Actor {
             if (Fear >= FearThreshold && !Fearless) {
                 GameController.GameOver();
                 Active = false;
+                Controller.InputMotion = Vector2.zero;
             }
 
             if (sprite != null)

@@ -14,6 +14,12 @@ public class GameController : MonoBehaviour {
         instance = this;
     }
 
+    private void Update() {
+        if (Input.GetKeyDown(KeyCode.Escape)) {
+            Application.Quit();
+        }
+    }
+
     public static void GameOver() {
         try {
             instance.StartCoroutine(instance.RestartSequence());

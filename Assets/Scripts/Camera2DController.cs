@@ -14,6 +14,10 @@ public class Camera2DController : MonoBehaviour {
     public float smoothTime = 0.3f;
     private Vector2 velocity = Vector2.zero;
 
+    private void Start() {
+        transform.position = new Vector3(objectToFollow.transform.position.x,objectToFollow.transform.position.y,transform.position.z);
+    }
+
 	private void Update () {
         Vector3 position = transform.position;
         Vector3 target = objectToFollow.transform.position + (Vector3)followOffset;
