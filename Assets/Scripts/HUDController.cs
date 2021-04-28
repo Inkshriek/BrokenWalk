@@ -13,19 +13,20 @@ public class HUDController : MonoBehaviour {
         instance = this;
     }
 
-	void Update () {
-
-	}
-
-    public static IEnumerator Fade(float duration, float tick, Color target) {
-        Color old;
+    public static void Fade(float duration, float tick, Color target, Color start) {
         try {
-            old = instance.fade.color;
+            instance.StartCoroutine(instance.FadeAnimation(duration, tick, target, start));
         }
         catch {
             Debug.Log("The Fade animation could not be started. Is the HUD missing from the current scene?");
-            yield break;
         }
+    }
+
+    public IEnumerator FadeAnimation(float duration, float tick, Color target, Color start) {
+        Color old;
+        if (start == null) old = instance.fade.color;
+        else old = start;
+
         float interp = 0;
         while (instance.fade.color != target) {
             interp += tick / duration;

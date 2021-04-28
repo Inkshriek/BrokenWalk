@@ -14,6 +14,7 @@ public class Player : Actor {
     [SerializeField] private float fearThreshold = 240;
     [SerializeField] private float reliefDelay = 2;
     [SerializeField] private bool fearless = false;
+    [SerializeField] private GameObject sprite;
     private Rigidbody2D rb;
     private bool jumping = false;
     private float fearRate = -1;
@@ -21,6 +22,11 @@ public class Player : Actor {
     private Pickup heldObject;
     private int facingDirection = 1;
     private Vector3 safety;
+
+    public Animator animator;
+    public SpriteRenderer spriteRenderer;
+
+    public AudioSource audioSource;
 
     public enum PlayerState {
         //This is just a set of states intended exclusively for the player.
@@ -81,7 +87,7 @@ public class Player : Actor {
         if (Active) {
             if (!Busy) {
                 if (State != PlayerState.Carrying) {
-                    if (Controller.IsTouchingGround && Input.GetKeyDown(GameController.jumpKey)) {
+                    if (Controller.IsTouchingGround && Input.GetKeyDown(KeyCode.Space)) {
                         Controller.ApplyJump(JumpHeight);
                         jumping = true;
                         rb.gravityScale /= 1.5f;
@@ -98,6 +104,7 @@ public class Player : Actor {
                             if (pickup != null) {
                                 heldObject = pickup;
                                 State = PlayerState.Carrying;
+                                animator.SetTrigger("PickUp");
                                 pickup.PickUp();
                             }
                         }
@@ -133,23 +140,31 @@ public class Player : Actor {
 
             Fear += Time.deltaTime * FearRate * 60;
             if (Fear >= FearThreshold && !Fearless) {
-                transform.position = safety;
-                Fear = 0;
+                GameController.GameOver();
+                Active = false;
             }
+
+            if (sprite != null)
+            sprite.transform.localScale = new Vector3(Mathf.Abs(sprite.transform.localScale.x) * facingDirection, sprite.transform.localScale.y, sprite.transform.localScale.z);
         }
+        AnimationTrigger();
     }
 
     public void Frighten() {
         if (Fearless) return;
 
+        animator.SetBool("AnimFear", true);
+        audioSource.Play();
         FearRate = 1;
         Speed = 1; //This is just an ez fix for now. Needs to be replaced with something relative.
         if (reliefRoutine != null) StopCoroutine(reliefRoutine);
     }
 
     public void Relieve() {
-        if (Fearless) return;
+        
 
+        animator.SetBool("AnimFear", false);
+        audioSource.Stop();
         FearRate = 0;
         Speed = 3; //This too.
         if (reliefRoutine != null) StopCoroutine(reliefRoutine);
@@ -159,5 +174,19 @@ public class Player : Actor {
     private IEnumerator ReliefTime() {
         yield return new WaitForSeconds(ReliefDelay);
         FearRate = -1;
+    }
+
+    //sending movment and input information from this script to the animator controller
+    private void AnimationTrigger()
+    {
+        //using speed to trigger animation states, might be better using player state, or converting fpeed float to int, but I am a fool
+        animator.SetFloat("Speed", Speed);
+
+        //juuump
+        if (jumping == true) animator.SetTrigger("Jump");
+
+        //fliping sprit horizontally with movment direction
+        if (facingDirection == 1) spriteRenderer.flipX = false;
+        if (facingDirection == -1) spriteRenderer.flipX = true;
     }
 }

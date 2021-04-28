@@ -28,4 +28,13 @@ public class Door : MonoBehaviour {
     public void SwitchDoor() {
         activated = !activated;
     }
+
+    public void DelayedSwitchDoor(float time) {
+        StartCoroutine(Delay(time));
+    }
+
+    private IEnumerator Delay(float time) {
+        yield return new WaitForSeconds(time);
+        activated = !activated;
+    }
 }

@@ -6,64 +6,29 @@ using UnityEngine.SceneManagement;
 public class GameController : MonoBehaviour {
 
     private static GameController instance;
-    private static SceneData sceneData;
-    [SerializeField] private Player player; //The player character.
-    public static bool cutsceneRunning = false;
-    public static KeyCode jumpKey = KeyCode.Space;
-    public static KeyCode useKey = KeyCode.E;
-
+    [SerializeField] private Player player;
+    [SerializeField] private Angel angel;
+    [SerializeField] private Camera2DController cam;
+    
     private void Awake() {
-        SceneManager.sceneLoaded += OnSceneLoaded;
-        Debug.Log("Initializing!");
-
-        cutsceneRunning = false;
         instance = this;
-
-        DontDestroyOnLoad(this.gameObject);
     }
 
-    // Use this for initialization
-    private void Start() {
-
-    }
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
-        sceneData = FindObjectOfType<SceneData>();
-        InitializeRoom();
-    }
-
-    public void InitializeRoom() {
-        
-	}
-
-    private void LoadGame() {
-
-    }
-	
-	// Update is called once per frame
-	private void Update () {
-		if (Input.GetKeyDown(KeyCode.R))
-        {
-            SceneManager.LoadScene("SampleScene");
+    public static void GameOver() {
+        try {
+            instance.StartCoroutine(instance.RestartSequence());
         }
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            Application.Quit();
+        catch {
+            Debug.Log("The game cannot be Game Overed. There is no GameController in the scene.");
         }
     }
 
-    private IEnumerator Load() {
-        /*
-        for (int i = 0; i < familiarsDatabase.Length; i++) {
-            GameObject obj = Instantiate(familiarsDatabase[i], player.transform.position, Quaternion.identity);
-            familiars.Add(obj.GetComponent<Familiar>());
-        }
-        */
-
-        yield return new WaitForSeconds(3f);
+    public IEnumerator RestartSequence() {
+        Angel angelinstance = Instantiate(angel, new Vector3(cam.transform.position.x, cam.transform.position.y, -1), Quaternion.identity);
+        angelinstance.SavePlayer();
+        yield return new WaitForSeconds(1);
+        HUDController.Fade(0.5f, 0.05f, Color.white, Color.clear);
+        yield return new WaitForSeconds(2);
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
-
-    //public void StartCutscene(Cutscene scene) {
-    //    cutsceneRunning = true;
-    //}
 }

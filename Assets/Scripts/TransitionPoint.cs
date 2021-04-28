@@ -30,6 +30,7 @@ public class TransitionPoint : MonoBehaviour {
         player.Active = false;
         ControlPlayer(player);
         TransitionOut?.Invoke();
+        HUDController.Fade(delayOut, delayOut / 20, Color.black, Color.clear);
         yield return new WaitForSeconds(delayOut);
 
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(destinationScene);
@@ -50,6 +51,7 @@ public class TransitionPoint : MonoBehaviour {
         }
 
         TransitionIn?.Invoke();
+        HUDController.Fade(delayIn, delayIn / 20, Color.clear, Color.black);
         yield return new WaitForSeconds(delayIn);
         player.Controller.InputMotion = Vector2.zero;
         player.Active = true;
